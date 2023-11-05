@@ -56,11 +56,6 @@ add_library(tiff SHARED
 
 
 add_library( freedcam SHARED
-        freedcam/DngWriter.cpp
-        freedcam/ExifInfo.cpp
-        freedcam/GpsInfo.cpp
-        freedcam/DngProfile.cpp
-        freedcam/CustomMatrix.cpp
         freedcam/lj92.cpp
 )
 
