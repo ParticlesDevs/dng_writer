@@ -8,60 +8,60 @@ SET(MY_C_AND_CXX_FLAGS  -Werror, -Wdeprecated-register, -Wc++11-narrowing, -Wcon
 
 
 include_directories(
-                    src/main/cpp/freedcam
+        freedcam
                    )
 
 add_library(tiff SHARED
-                    src/main/cpp/tiff/libtiff/mkg3states.c
-                    src/main/cpp/tiff/libtiff/tif_aux.c
-                    src/main/cpp/tiff/libtiff/tif_close.c
-                    src/main/cpp/tiff/libtiff/tif_codec.c
-                    src/main/cpp/tiff/libtiff/tif_color.c
-                    src/main/cpp/tiff/libtiff/tif_compress.c
-                    src/main/cpp/tiff/libtiff/tif_dir.c
-                    src/main/cpp/tiff/libtiff/tif_dirinfo.c
-                    src/main/cpp/tiff/libtiff/tif_dirread.c
-                    src/main/cpp/tiff/libtiff/tif_dirwrite.c
-                    src/main/cpp/tiff/libtiff/tif_dumpmode.c
-                    src/main/cpp/tiff/libtiff/tif_error.c
-                    src/main/cpp/tiff/libtiff/tif_extension.c
-                    src/main/cpp/tiff/libtiff/tif_fax3.c
-                    src/main/cpp/tiff/libtiff/tif_fax3sm.c
-                    src/main/cpp/tiff/libtiff/tif_flush.c
-                    src/main/cpp/tiff/libtiff/tif_getimage.c
-                    src/main/cpp/tiff/libtiff/tif_jbig.c
-                    src/main/cpp/tiff/libtiff/tif_jpeg.c
-                    src/main/cpp/tiff/libtiff/tif_jpeg_12.c
-                    src/main/cpp/tiff/libtiff/tif_luv.c
-                    src/main/cpp/tiff/libtiff/tif_lzma.c
-                    src/main/cpp/tiff/libtiff/tif_lzw.c
-                    src/main/cpp/tiff/libtiff/tif_next.c
-                    src/main/cpp/tiff/libtiff/tif_ojpeg.c
-                    src/main/cpp/tiff/libtiff/tif_open.c
-                    src/main/cpp/tiff/libtiff/tif_packbits.c
-                    src/main/cpp/tiff/libtiff/tif_pixarlog.c
-                    src/main/cpp/tiff/libtiff/tif_predict.c
-                    src/main/cpp/tiff/libtiff/tif_print.c
-                    src/main/cpp/tiff/libtiff/tif_read.c
-                    src/main/cpp/tiff/libtiff/tif_strip.c
-                    src/main/cpp/tiff/libtiff/tif_swab.c
-                    src/main/cpp/tiff/libtiff/tif_thunder.c
-                    src/main/cpp/tiff/libtiff/tif_tile.c
-                    src/main/cpp/tiff/libtiff/tif_unix.c
-                    src/main/cpp/tiff/libtiff/tif_version.c
-                    src/main/cpp/tiff/libtiff/tif_warning.c
-                    src/main/cpp/tiff/libtiff/tif_write.c
-                    src/main/cpp/tiff/libtiff/tif_zip.c
+        tiff/libtiff/mkg3states.c
+        tiff/libtiff/tif_aux.c
+        tiff/libtiff/tif_close.c
+        tiff/libtiff/tif_codec.c
+        tiff/libtiff/tif_color.c
+        tiff/libtiff/tif_compress.c
+        tiff/libtiff/tif_dir.c
+        tiff/libtiff/tif_dirinfo.c
+        tiff/libtiff/tif_dirread.c
+        tiff/libtiff/tif_dirwrite.c
+        tiff/libtiff/tif_dumpmode.c
+        tiff/libtiff/tif_error.c
+        tiff/libtiff/tif_extension.c
+        tiff/libtiff/tif_fax3.c
+        tiff/libtiff/tif_fax3sm.c
+        tiff/libtiff/tif_flush.c
+        tiff/libtiff/tif_getimage.c
+        tiff/libtiff/tif_jbig.c
+        tiff/libtiff/tif_jpeg.c
+        tiff/libtiff/tif_jpeg_12.c
+        tiff/libtiff/tif_luv.c
+        tiff/libtiff/tif_lzma.c
+        tiff/libtiff/tif_lzw.c
+        tiff/libtiff/tif_next.c
+        tiff/libtiff/tif_ojpeg.c
+        tiff/libtiff/tif_open.c
+        tiff/libtiff/tif_packbits.c
+        tiff/libtiff/tif_pixarlog.c
+        tiff/libtiff/tif_predict.c
+        tiff/libtiff/tif_print.c
+        tiff/libtiff/tif_read.c
+        tiff/libtiff/tif_strip.c
+        tiff/libtiff/tif_swab.c
+        tiff/libtiff/tif_thunder.c
+        tiff/libtiff/tif_tile.c
+        tiff/libtiff/tif_unix.c
+        tiff/libtiff/tif_version.c
+        tiff/libtiff/tif_warning.c
+        tiff/libtiff/tif_write.c
+        tiff/libtiff/tif_zip.c
                     )
 
 
-add_library( freedcam SHARED  
-                              src/main/cpp/freedcam/DngWriter.cpp
-                              src/main/cpp/freedcam/ExifInfo.cpp
-                              src/main/cpp/freedcam/GpsInfo.cpp
-                              src/main/cpp/freedcam/DngProfile.cpp
-                              src/main/cpp/freedcam/CustomMatrix.cpp
-                              src/main/cpp/freedcam/lj92.cpp
+add_library( freedcam SHARED
+        freedcam/DngWriter.cpp
+        freedcam/ExifInfo.cpp
+        freedcam/GpsInfo.cpp
+        freedcam/DngProfile.cpp
+        freedcam/CustomMatrix.cpp
+        freedcam/lj92.cpp
 )
 
-target_link_libraries(freedcam jnigraphics android log tiff)
+target_link_libraries(freedcam tiff)
