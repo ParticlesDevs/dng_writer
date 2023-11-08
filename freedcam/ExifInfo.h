@@ -2,9 +2,6 @@
 // Created by troop on 01.03.2018.
 //
 
-#include <jni.h>
-#include "JniUtils.h"
-
 #ifndef FREEDCAM_EXIFINFO_H
 #define FREEDCAM_EXIFINFO_H
 
@@ -21,9 +18,9 @@ public:
 
     void clear()
     {
-        _imagedescription = NULL;
-        _dateTime = NULL;
-        _orientation = NULL;
+        _imagedescription = nullptr;
+        _dateTime = nullptr;
+        _orientation = nullptr;
     };
 
     ExifInfo()

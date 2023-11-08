@@ -1,9 +1,6 @@
 //
 // Created by troop on 03.03.2018.
 //
-#include <jni.h>
-#include "JniUtils.h"
-
 #ifndef FREEDCAM_CUSTOMMATRIX_H
 #define FREEDCAM_CUSTOMMATRIX_H
 
@@ -21,62 +18,62 @@ public:
 
     CustomMatrix()
     {
-        colorMatrix1 = NULL;
-        colorMatrix2 = NULL;
-        neutralColorMatrix = NULL;
-        fowardMatrix1 = NULL;
-        fowardMatrix2 = NULL;
-        reductionMatrix1 = NULL;
-        reductionMatrix2 = NULL;
-        noiseMatrix = NULL;
+        colorMatrix1 = nullptr;
+        colorMatrix2 = nullptr;
+        neutralColorMatrix = nullptr;
+        fowardMatrix1 = nullptr;
+        fowardMatrix2 = nullptr;
+        reductionMatrix1 = nullptr;
+        reductionMatrix2 = nullptr;
+        noiseMatrix = nullptr;
     }
 
     void clear()
     {
-        if(colorMatrix1 != NULL)
+        if(colorMatrix1 != nullptr)
         {
             delete[] colorMatrix1;
-            colorMatrix1 = NULL;
+            colorMatrix1 = nullptr;
         }
-        if(colorMatrix2 != NULL)
+        if(colorMatrix2 != nullptr)
         {
             delete[] colorMatrix2;
-            colorMatrix2 = NULL;
+            colorMatrix2 = nullptr;
         }
-        if(neutralColorMatrix != NULL)
+        if(neutralColorMatrix != nullptr)
         {
             delete[] neutralColorMatrix;
-            neutralColorMatrix = NULL;
+            neutralColorMatrix = nullptr;
         }
-        if(fowardMatrix1 != NULL)
+        if(fowardMatrix1 != nullptr)
         {
             delete[] fowardMatrix1;
-            fowardMatrix1 = NULL;
+            fowardMatrix1 = nullptr;
         }
-        if(fowardMatrix2 != NULL)
+        if(fowardMatrix2 != nullptr)
         {
             delete[] fowardMatrix2;
-            fowardMatrix2 = NULL;
+            fowardMatrix2 = nullptr;
         }
-        if(reductionMatrix1 != NULL)
+        if(reductionMatrix1 != nullptr)
         {
             delete[] reductionMatrix1;
-            reductionMatrix1 = NULL;
+            reductionMatrix1 = nullptr;
         }
-        if(reductionMatrix2 != NULL)
+        if(reductionMatrix2 != nullptr)
         {
             delete[] reductionMatrix2;
-            reductionMatrix2 = NULL;
+            reductionMatrix2 = nullptr;
         }
-        if(reductionMatrix2 != NULL)
+        if(reductionMatrix2 != nullptr)
         {
             delete[] reductionMatrix2;
-            reductionMatrix2 = NULL;
+            reductionMatrix2 = nullptr;
         }
-        if(noiseMatrix != NULL)
+        if(noiseMatrix != nullptr)
         {
             delete[] noiseMatrix;
-            noiseMatrix = NULL;
+            noiseMatrix = nullptr;
         }
     }
 };

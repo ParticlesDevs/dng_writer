@@ -5,8 +5,6 @@
 #ifndef FREEDCAM_DNGPROFILE_H
 #define FREEDCAM_DNGPROFILE_H
 
-#include <jni.h>
-
 class DngProfile
 {
 public:
