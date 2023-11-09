@@ -170,3 +170,5 @@ void _XTIFFInitialize(void)
 }
 
 #endif //FREEDCAM_DNGTAGS_H
+
+#pragma clang diagnostic pop

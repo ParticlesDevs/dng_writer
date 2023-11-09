@@ -1,10 +1,26 @@
 //
 // Created by troop on 23.10.2016.
 //
+#pragma once
 
-#ifndef FREEDCAM_DNGWRITER_H
-#define FREEDCAM_DNGWRITER_H
+//#define LOG_RAW_DATA
 
+
+//shift 10bit tight data into readable bitorder
+#define DNG_10BIT_TIGHT_SHIFT 0
+//shift 10bit loose data into readable bitorder
+#define DNG_10BIT_LOOSE_SHIFT 1
+//drops the 6 first bit from pure 16bit data(mtk soc, Camera2 RAW_SENSOR)
+#define DNG_16BIT_TO_10BIT 2
+//convert and shift 10bit tight data into 16bit pure
+#define DNG_10BIT_TO_16BIT 3
+//shift 12bit data into readable bitorder
+#define DNG_12BIT_SHIFT 4
+
+#define DNG_16BIT_TO_12BIT 5
+#define DNG_16BIT 6
+#define DNG_QUADBAYER_16BIT 7
+#define DNG_16_TO_LOSSLESS 8
 
 #include "tiffio.h"
 #include "tiffiop.h"
@@ -26,6 +42,7 @@ class DngWriter
 {
 
 private:
+    int (*logWriter)(const char* format, ...);
     //open tiff from filepath
     TIFF *openfTIFF(char* fileSavePath);
     //open tiff from filedescriptor
@@ -41,7 +58,7 @@ private:
     void processSXXX16crop(TIFF *tif);
     void process16to10(TIFF *tif);
     void process16to12(TIFF *tif);
-    void writeRawStuff(TIFF *tif);
+    void writeRawBuffer(TIFF *tif);
     void quadBayer16bit(TIFF *tif);
     void process16ToLossless(TIFF *tiff);
     unsigned short getColor(int row, int col);
@@ -56,7 +73,7 @@ public:
     char*_model = NULL;
     char* _dateTime = NULL;
 
-    long rawSize;
+    long rawSize{};
 
     char *fileSavePath;
     long fileLength;
@@ -68,9 +85,9 @@ public:
     int huesatmapdata1_size;
     float *huesatmapdata2;
     int huesatmapdata2_size;
-    float baselineExposure;
-    float baselineExposureOffset;
-    unsigned int bayergreensplit;
+    float baselineExposure{};
+    float baselineExposureOffset{};
+    unsigned int bayergreensplit{};
 
     int *huesatmapdims;
 
@@ -82,30 +99,31 @@ public:
     int crop_height;
     int compression = COMPRESSION_NONE;
 
-    int thumbheight, thumwidth;
-    unsigned char* _thumbData;
+    int thumbheight{}, thumwidth{};
+    unsigned char* _thumbData{};
 
-    DngWriter()
+    explicit DngWriter(int printf(const char* format, ...))
     {
-        exifInfo = NULL;
-        gpsInfo = NULL;
-        dngProfile = NULL;
-        customMatrix = NULL;
-        opCode = NULL;
+        logWriter = printf;
+        exifInfo = nullptr;
+        gpsInfo = nullptr;
+        dngProfile = nullptr;
+        customMatrix = nullptr;
+        opCode = nullptr;
         fileDes = -1;
         hasFileDes = false;
-        tonecurve = NULL;
-        fileSavePath = NULL;
+        tonecurve = nullptr;
+        fileSavePath = nullptr;
         fileLength = 0;
-        bayerBytes = NULL;
+        bayerBytes = nullptr;
         tonecurvesize = 0;
-        huesatmapdata1 = NULL;
+        huesatmapdata1 = nullptr;
         huesatmapdata1_size = 0;
-        huesatmapdata2 = NULL;
+        huesatmapdata2 = nullptr;
         huesatmapdata2_size = 0;
-        huesatmapdims = NULL;
+        huesatmapdims = nullptr;
         crop_width = 0;
-        crop_height =0;
+        crop_height = 0;
     }
 
     void WriteDNG();
@@ -113,6 +131,3 @@ public:
 
 
 };
-
-
-#endif //FREEDCAM_DNGWRITER_H

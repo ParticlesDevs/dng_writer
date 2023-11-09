@@ -5,30 +5,11 @@
 #include <string.h>
 #include <math.h>
 #include "DngWriter.h"
+
+extern "C" {
 #include "lj92.h"
+}
 
-
-//#define LOG_RAW_DATA
-
-#define  LOG_TAG    "freedcam.DngWriter"
-//#define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
-#define  LOGD(...)  printf(__VA_ARGS__)
-
-//shift 10bit tight data into readable bitorder
-#define RAW_10BIT_TIGHT_SHIFT 0
-//shift 10bit loose data into readable bitorder
-#define RAW_10BIT_LOOSE_SHIFT 1
-//drops the 6 first bit from pure 16bit data(mtk soc, Camera2 RAW_SENSOR)
-#define RAW_16BIT_TO_10BIT 2
-//convert and shift 10bit tight data into 16bit pure
-#define RAW_10BIT_TO_16BIT 3
-//shift 12bit data into readable bitorder
-#define RAW_12BIT_SHIFT 4
-
-#define RAW_16BIT_TO_12BIT 5
-#define RAW_16BIT 6
-#define QUADBAYER_16BIT 7
-#define RAW16_TO_LOSSLESS 8
 
 #ifdef LOG_RAW_DATA
 const char *bit_rep[16] = {
@@ -45,7 +26,7 @@ TIFF* DngWriter::openfTIFF(char *fileSavePath)
     TIFF *tif;
     if (!(tif = TIFFOpen (fileSavePath, "w")))
     {
-        LOGD("openfTIFF:error while creating outputfile");
+        logWriter("openfTIFF:error while creating outputfile");
     }
     return tif;
 }
@@ -53,10 +34,10 @@ TIFF* DngWriter::openfTIFF(char *fileSavePath)
 TIFF* DngWriter::openfTIFFFD(char *fileSavePath, int fd) {
     TIFF *tif;
 
-    LOGD("FD: %d", fd);
+    logWriter("FD: %d", fd);
     if (!(tif = TIFFFdOpen (fd,fileSavePath, "w")))
     {
-        LOGD("openfTIFFFD:error while creating outputfile");
+        logWriter("openfTIFFFD:error while creating outputfile");
     }
     return tif;
 }
@@ -75,17 +56,18 @@ void DngWriter::writeIfd0(TIFF *tif) {
         height = crop_height;
     }
 
-    if(dngProfile->rawType == RAW_10BIT_LOOSE_SHIFT
-       || dngProfile->rawType == RAW_10BIT_TO_16BIT
-       || dngProfile->rawType == RAW_16BIT
-       || dngProfile->rawType == QUADBAYER_16BIT && dngProfile->rawType == RAW16_TO_LOSSLESS)
+    if(dngProfile->rawType == DNG_10BIT_LOOSE_SHIFT
+       || dngProfile->rawType == DNG_10BIT_TO_16BIT
+       || dngProfile->rawType == DNG_16BIT
+       || dngProfile->rawType == DNG_QUADBAYER_16BIT && dngProfile->rawType == DNG_16_TO_LOSSLESS)
         bits_per_sample = 16;
-    else if (dngProfile->rawType == RAW_12BIT_SHIFT || dngProfile->rawType == RAW_16BIT_TO_12BIT)
+    else if (dngProfile->rawType == DNG_12BIT_SHIFT || dngProfile->rawType == DNG_16BIT_TO_12BIT)
         bits_per_sample = 12;
     else
         bits_per_sample = 10;
+    logWriter("bitspersample %i", bits_per_sample);
 
-    if(dngProfile->rawType == RAW16_TO_LOSSLESS)
+    if(dngProfile->rawType == DNG_16_TO_LOSSLESS)
         compression = COMPRESSION_JPEG;
 
     if (compression == COMPRESSION_NONE || compression == COMPRESSION_JPEG)
@@ -106,7 +88,7 @@ void DngWriter::writeIfd0(TIFF *tif) {
     if(0 == strcmp(dngProfile->bayerformat , "rgbw")){
         cfa[0] = 0;cfa[1] = 1;cfa[2] = 2;cfa[3] = 6;}//TIFFSetField (tif, TIFFTAG_CFAPATTERN, "\0\001\002\006");
 
-    LOGD("cfa pattern %c%c&c&c", cfa[0],cfa[1],cfa[2],cfa[3]);
+    logWriter("cfa pattern %i%i%i%i", cfa[0],cfa[1],cfa[2],cfa[3]);
 
     short CFARepeatPatternDim[] = { 2,2 };
     float margin = 8;
@@ -114,36 +96,37 @@ void DngWriter::writeIfd0(TIFF *tif) {
     float  defaultCropOrigin[] = {margin, margin};
     float  defaultCropSize[2];
     if (crop_width == 0 && crop_height == 0) {
-        defaultCropSize[0] = dngProfile->rawwidht - defaultCropOrigin[0] - margin;
-        defaultCropSize[1] = dngProfile->rawheight - defaultCropOrigin[1] - margin;
+        defaultCropSize[0] = width - defaultCropOrigin[0] - margin;
+        defaultCropSize[1] = height - defaultCropOrigin[1] - margin;
     }
     else
     {
-        defaultCropSize[0] = crop_width - defaultCropOrigin[0] - margin;
-        defaultCropSize[1] = crop_height - defaultCropOrigin[1] - margin;
+        defaultCropSize[0] = width - defaultCropOrigin[0] - margin;
+        defaultCropSize[1] = height - defaultCropOrigin[1] - margin;
     }
+    logWriter("defaultCropSize %f %f", defaultCropSize[0], defaultCropSize[1]);
 
     TIFFSetField(tif, TIFFTAG_DNGVERSION, "\001\004\0\0");
     TIFFSetField(tif, TIFFTAG_DNGBACKWARDVERSION, "\001\001\0\0");
     TIFFSetField (tif, TIFFTAG_SUBFILETYPE, 0);
     TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width);
     TIFFSetField(tif, TIFFTAG_IMAGELENGTH, height);
-    LOGD("width x height:  %i x i%", width,height);
+    logWriter("width x height:  %i x %i", width,height);
     TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, bits_per_sample);
-    LOGD("bitspersample %i", bits_per_sample);
+    logWriter("bitspersample %i", bits_per_sample);
     TIFFSetField(tif, TIFFTAG_COMPRESSION, compression);
-    LOGD("Compression i%", compression);
+    logWriter("Compression %i", compression);
     TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, photometric);
-    LOGD("PhotometricCFA i%", photometric);
+    logWriter("PhotometricCFA %i", photometric);
 
     TIFFSetField(tif, TIFFTAG_FILLORDER, FILLORDER_MSB2LSB);
-    if(exifInfo != NULL)
+    if(exifInfo != nullptr)
         TIFFSetField(tif, TIFFTAG_IMAGEDESCRIPTION, exifInfo->_imagedescription);
     TIFFSetField(tif, TIFFTAG_MAKE, _make);
-    LOGD("make %s", _make);
+    logWriter("make %s", _make);
     TIFFSetField(tif, TIFFTAG_MODEL, _model);
-    LOGD("model %s",_model);
-    if (exifInfo != NULL)
+    logWriter("model %s",_model);
+    if (exifInfo != nullptr)
     {
         try
         {
@@ -155,60 +138,60 @@ void DngWriter::writeIfd0(TIFF *tif) {
                 TIFFSetField(tif, TIFFTAG_ORIENTATION, ORIENTATION_BOTRIGHT);
             if (0 == strcmp(exifInfo->_orientation, "270"))
                 TIFFSetField(tif, TIFFTAG_ORIENTATION, ORIENTATION_LEFTBOT);
-            LOGD("orientation %s",exifInfo->_orientation);
+            logWriter("orientation %s",exifInfo->_orientation);
         }
         catch (...)
         {
-            LOGD("failed to set orientation");
+            logWriter("failed to set orientation");
         }
     }
     else
         TIFFSetField(tif, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);
     TIFFSetField (tif, TIFFTAG_SAMPLESPERPIXEL, 1);
-    LOGD("sampelsperpixel %i" ,1);
-    TIFFSetField( tif, TIFFTAG_XRESOLUTION, 7200 );
-    TIFFSetField( tif, TIFFTAG_YRESOLUTION, 7200 );
+    logWriter("sampelsperpixel %i" ,1);
+    TIFFSetField( tif, TIFFTAG_XRESOLUTION, 7200);
+    TIFFSetField( tif, TIFFTAG_YRESOLUTION, 7200);
     TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
     TIFFSetField(tif, TIFFTAG_RESOLUTIONUNIT, RESUNIT_INCH);
-    TIFFSetField(tif, TIFFTAG_SOFTWARE, "FreeDcam DNG Writer 2022");
-    if(_dateTime != NULL)
+    TIFFSetField(tif, TIFFTAG_SOFTWARE, "FreeDcam DNG Writer 2023");
+    if(_dateTime != nullptr)
         TIFFSetField(tif,TIFFTAG_DATETIME, _dateTime);
     TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
     //30k
-    TIFFSetField (tif, TIFFTAG_CFAREPEATPATTERNDIM, CFARepeatPatternDim);
-    TIFFSetField (tif, TIFFTAG_CFAPATTERN, cfa);
+    TIFFSetField(tif, TIFFTAG_CFAREPEATPATTERNDIM, CFARepeatPatternDim);
+    TIFFSetField(tif, TIFFTAG_CFAPATTERN, 4, cfa);
     TIFFSetField(tif, TIFFTAG_EP_STANDARD_ID, "\001\000\0\0");
     //50k
-    if(_model != NULL){
+    if(_model != nullptr){
         TIFFSetField(tif, TIFFTAG_UNIQUECAMERAMODEL, _model);
-        LOGD("CameraModel %s",_model);
+        logWriter("CameraModel %s",_model);
     }
     TIFFSetField( tif, TIFFTAG_CFAPLANECOLOR, 3, "\00\01\02" ); // RGB
     TIFFSetField( tif, TIFFTAG_CFALAYOUT, 1 );
 
     TIFFSetField (tif, TIFFTAG_BLACKLEVELREPEATDIM, CFARepeatPatternDim);
     TIFFSetField (tif, TIFFTAG_BLACKLEVEL, 4, dngProfile->blacklevel);
-    LOGD("wrote blacklevel");
+    logWriter("wrote blacklevel");
     TIFFSetField (tif, TIFFTAG_WHITELEVEL, 1, &dngProfile->whitelevel);
     TIFFSetField(tif,TIFFTAG_DEFAULTSCALE, scale);
 
-    LOGD("defaultCropOrigin");
-    TIFFSetField(tif, TIFFTAG_DEFAULTCROPORIGIN, defaultCropOrigin);
-    LOGD("defaultCropSize");
-    TIFFSetField(tif, TIFFTAG_DEFAULTCROPSIZE, defaultCropSize);
+    logWriter("defaultCropOrigin");
+    //TIFFSetField(tif, TIFFTAG_DEFAULTCROPORIGIN, defaultCropOrigin);
+    logWriter("defaultCropSize");
+    //TIFFSetField(tif, TIFFTAG_DEFAULTCROPSIZE, defaultCropSize);
 
     TIFFSetField(tif, TIFFTAG_COLORMATRIX1, 9,customMatrix->colorMatrix1);
     TIFFSetField(tif, TIFFTAG_COLORMATRIX2, 9, customMatrix->colorMatrix2);
 
-    LOGD("reductionMatrix1");
-    if(customMatrix->reductionMatrix1 != NULL)
-        TIFFSetField(tif, TIFFTAG_CAMERACALIBRATION1, 9,  customMatrix->reductionMatrix1);
-    LOGD("reductionMatrix2");
-    if(customMatrix->reductionMatrix2 != NULL)
-        TIFFSetField(tif, TIFFTAG_CAMERACALIBRATION2, 9,  customMatrix->reductionMatrix2);
-    TIFFSetField(tif, TIFFTAG_ASSHOTNEUTRAL, 3, customMatrix->neutralColorMatrix);
+    logWriter("calibrationMatrix1");
+    if(customMatrix->calibrationMatrix1 != nullptr)
+        TIFFSetField(tif, TIFFTAG_CAMERACALIBRATION1, 9,  customMatrix->calibrationMatrix1);
+    logWriter("calibrationMatrix2");
+    if(customMatrix->calibrationMatrix2 != nullptr)
+        TIFFSetField(tif, TIFFTAG_CAMERACALIBRATION2, 9,  customMatrix->calibrationMatrix2);
+    TIFFSetField(tif, TIFFTAG_ASSHOTNEUTRAL, 3, customMatrix->neutralColorVector);
 
-    LOGD("baselineExposure");
+    logWriter("baselineExposure");
     double baseS = baselineExposure;
     TIFFSetField(tif,TIFFTAG_BASELINEEXPOSURE, baseS);
 
@@ -219,80 +202,81 @@ void DngWriter::writeIfd0(TIFF *tif) {
     TIFFSetField(tif, TIFFTAG_CALIBRATIONILLUMINANT1, 21);
     TIFFSetField(tif, TIFFTAG_CALIBRATIONILLUMINANT2, 17);
 
-    if(dngProfile->activearea != nullptr && crop_width == 0 && crop_height == 0)
+    if(dngProfile->activearea != nullptr)
     {
         TIFFSetField(tif,TIFFTAG_ACTIVEAREA, dngProfile->activearea);
     }
     else
     {
-        int active_area[] = {0,0,crop_width,crop_height};
+        int active_area[] = {0,0,width,height};
+        logWriter("activearea %i %i %i %i", active_area[0],active_area[1],active_area[2],active_area[3]);
         TIFFSetField(tif,TIFFTAG_ACTIVEAREA, active_area);
     }
 
-    LOGD("huesatmapdims");
-    if(huesatmapdims != NULL)
+    logWriter("huesatmapdims");
+    if(huesatmapdims != nullptr)
     {
         TIFFSetField(tif, TIFFTAG_PROFILEHUESATMAPDIMS, 3, huesatmapdims);
     }
-    LOGD("huesatmapdata1");
-    if(huesatmapdata1 != NULL)
+    logWriter("huesatmapdata1");
+    if(huesatmapdata1 != nullptr)
     {
         TIFFSetField(tif,TIFFTAG_PROFILEHUESATMAPDATA1, huesatmapdata1_size,huesatmapdata1);
     }
-    LOGD("huesatmapdata2");
-    if(huesatmapdata2 != NULL)
+    logWriter("huesatmapdata2");
+    if(huesatmapdata2 != nullptr)
     {
         TIFFSetField(tif,TIFFTAG_PROFILEHUESATMAPDATA2, huesatmapdata2_size,huesatmapdata2);
     }
-    LOGD("tonecurve");
-    if(tonecurve != NULL)
+    logWriter("tonecurve");
+    if(tonecurve != nullptr)
     {
         TIFFSetField(tif,TIFFTAG_PROFILETONECURVE, tonecurvesize,tonecurve);
     }
-    LOGD("fowardMatrix1");
-    if(customMatrix->fowardMatrix1 != NULL)
+    logWriter("fowardMatrix1");
+    if(customMatrix->fowardMatrix1 != nullptr)
         TIFFSetField(tif, TIFFTAG_FOWARDMATRIX1, 9,  customMatrix->fowardMatrix1);
-    LOGD("fowardMatrix2");
-    if(customMatrix->fowardMatrix2 != NULL)
+    logWriter("fowardMatrix2");
+    if(customMatrix->fowardMatrix2 != nullptr)
         TIFFSetField(tif, TIFFTAG_FOWARDMATRIX2, 9,  customMatrix->fowardMatrix2);
     //51k
-    /*if(opCode != NULL){
+    /*if(opCode != nullptr){
         if(opCode->op2Size > 0){
-            LOGD("Set OP2 %i", opCode->op2Size);
+            logWriter("Set OP2 %i", opCode->op2Size);
             TIFFSetField(tif, TIFFTAG_OPC2, opCode->op2Size, opCode->op2);
         }else{
-            LOGD("opcode2 null");
+            logWriter("opcode2 nullptr");
         }
         if(opCode->op3Size > 0){
-            LOGD("Set OP3 %i", opCode->op3Size);
+            logWriter("Set OP3 %i", opCode->op3Size);
             TIFFSetField(tif, TIFFTAG_OPC3, opCode->op3Size, opCode->op3);
         }else{
-            LOGD("opcode3 null");
+            logWriter("opcode3 nullptr");
         }
     } else{
-        LOGD("opcode null");
+        logWriter("opcode nullptr");
     }*/
-    LOGD("noiseMatrix");
-    if(customMatrix->noiseMatrix != NULL)
+    logWriter("noiseMatrix");
+    if(customMatrix->noiseMatrix != nullptr)
         TIFFSetField(tif, TIFFTAG_NOISEPROFILE, 6,  customMatrix->noiseMatrix);
-    LOGD("baselineExposureOffset");
-    if(baselineExposureOffset != NULL)
+    logWriter("baselineExposureOffset");
+    if(baselineExposureOffset != 0.f)
     {
         TIFFSetField(tif,TIFFTAG_BASELINEEXPOSUREOFFSET, baselineExposureOffset);
     }
 }
 
 void DngWriter::makeGPS_IFD(TIFF *tif) {
-    LOGD("GPS IFD DATA");
+    logWriter("GPS IFD DATA");
     if (TIFFCreateGPSDirectory(tif) != 0)
     {
-        LOGD("TIFFCreateGPSDirectory() failed" );
+        logWriter("TIFFCreateGPSDirectory() failed" );
     }
     if (!TIFFSetField( tif, GPSTAG_GPSVersionID, "\002\003\0\0"))
     {
-        LOGD("Can't write GPSVersionID" );
+        logWriter("Can't write GPSVersionID" );
     }
-    LOGD("Wrote GPSVersionID" );
+    logWriter("Wrote GPSVersionID" );
 
     const char* longitudeRef = "E";
     if (gpsInfo->Longitude[0] < 0) {
@@ -301,107 +285,107 @@ void DngWriter::makeGPS_IFD(TIFF *tif) {
     }
     if (!TIFFSetField( tif, GPSTAG_GPSLongitudeRef, longitudeRef))
     {
-        LOGD("Can't write LongitudeRef" );
+        logWriter("Can't write LongitudeRef" );
     }
-    LOGD("LONG REF Written %c", longitudeRef);
+    logWriter("LONG REF Written %c", longitudeRef);
 
     if (!TIFFSetField(tif, GPSTAG_GPSLongitude, gpsInfo->Longitude))
     {
-        LOGD("Can't write Longitude" );
+        logWriter("Can't write Longitude" );
     }
-    LOGD("Longitude Written");
+    logWriter("Longitude Written");
     const char* latitudeRef = "N";
     if (gpsInfo->Latitude[0] < 0) {
         latitudeRef = "S";
         gpsInfo->Latitude[0] = fabsf(gpsInfo->Latitude[0]);
     }
-    LOGD("PMETH Written");
+    logWriter("PMETH Written");
     if (!TIFFSetField( tif, GPSTAG_GPSLatitudeRef, latitudeRef)) {
-        LOGD("Can't write LAti REf" );
+        logWriter("Can't write LAti REf" );
     }
-    LOGD("LATI REF Written %c", latitudeRef);
+    logWriter("LATI REF Written %c", latitudeRef);
 
     if (!TIFFSetField( tif, GPSTAG_GPSLatitude,gpsInfo->Latitude))
     {
-        LOGD("Can't write Latitude" );
+        logWriter("Can't write Latitude" );
     }
-    LOGD("Latitude Written");
+    logWriter("Latitude Written");
     if (!TIFFSetField( tif, GPSTAG_GPSAltitude,gpsInfo->Altitude))
     {
-        LOGD("Can't write Altitude" );
+        logWriter("Can't write Altitude" );
     }
-    LOGD("Altitude Written");
+    logWriter("Altitude Written");
 
     if (!TIFFSetField( tif, GPSTAG_GPSTimeStamp, gpsInfo->gpsTime))
     {
-        LOGD("Can't write gpsTime" );
+        logWriter("Can't write gpsTime" );
     }
-    LOGD("GPSTimeStamp Written");
+    logWriter("GPSTimeStamp Written");
 
     if (!TIFFSetField( tif, GPSTAG_GPSDateStamp, gpsInfo->gpsDate))
     {
-        LOGD("Can't write gpsTime" );
+        logWriter("Can't write gpsTime" );
     }
-    LOGD("GPSTimeDate Written");
+    logWriter("GPSTimeDate Written");
 }
 
 void DngWriter::writeExifIfd(TIFF *tif) {
 
     /////////////////////////////////// EXIF IFD //////////////////////////////
     short iso[] = {static_cast<short>(exifInfo->_iso)};
-    LOGD("EXIF dir created");
+    logWriter("EXIF dir created");
     if (!TIFFSetField( tif, EXIFTAG_ISOSPEEDRATINGS,1, iso)) {
-        LOGD("Can't write SPECTRALSENSITIVITY" );
+        logWriter("Can't write SPECTRALSENSITIVITY" );
     }
-    LOGD("iso");
+    logWriter("iso");
     if (!TIFFSetField( tif, EXIFTAG_FLASH, exifInfo->_flash)) {
-        LOGD("Can't write Flas" );
+        logWriter("Can't write Flas" );
     }
-    LOGD("flash");
+    logWriter("flash");
     if (!TIFFSetField( tif, EXIFTAG_APERTUREVALUE, exifInfo->_fnumber)) {
-        LOGD("Can't write Aper" );
+        logWriter("Can't write Aper" );
     }
-    LOGD("aperture");
+    logWriter("aperture");
 
     if (!TIFFSetField( tif, EXIFTAG_EXPOSURETIME,exifInfo->_exposure)) {
-        LOGD("Can't write SPECTRALSENSITIVITY" );
+        logWriter("Can't write SPECTRALSENSITIVITY" );
     }
-    LOGD("exposure");
+    logWriter("exposure");
 
 
     if (!TIFFSetField( tif, EXIFTAG_FOCALLENGTH, exifInfo->_focallength)) {
-        LOGD("Can't write Focal" );
+        logWriter("Can't write Focal" );
     }
-    LOGD("focal");
+    logWriter("focal");
 
     if (!TIFFSetField( tif, EXIFTAG_FNUMBER, exifInfo->_fnumber)) {
-        LOGD("Can't write FNum" );
+        logWriter("Can't write FNum" );
     }
 
     if(!TIFFSetField(tif,EXIFTAG_EXPOSUREINDEX, exifInfo->_exposureIndex))
-        LOGD("Cant write expoindex");
-    LOGD("fnumber");
+        logWriter("Cant write expoindex");
+    logWriter("fnumber");
 }
 
 //process mipi10bit to 16bit 10bit values stored
 void DngWriter::processTight(TIFF *tif) {
-    LOGD("IN SXXXXl0");
+    logWriter("IN SXXXXl0");
     int i, j, row, col, b;
     unsigned char *buffer, *dp;
     unsigned short pixel[dngProfile->rawwidht]; // array holds 16 bits per pixel
 
-    LOGD("buffer set");
+    logWriter("buffer set");
     j=0;
     if(dngProfile->rowSize == 0)
         dngProfile->rowSize =  -(-5 * dngProfile->rawwidht >> 5) << 3;
     buffer =(unsigned char *)malloc(dngProfile->rowSize);
     memset( buffer, 0, dngProfile->rowSize);
-    if (buffer == NULL)
+    if (buffer == nullptr)
     {
-        LOGD("allocating buffer failed try again");
+        logWriter("allocating buffer failed try again");
         buffer =(unsigned char *)malloc(dngProfile->rowSize);
     }
-    LOGD("rowsize:%i", dngProfile->rowSize);
+    logWriter("rowsize:%i", dngProfile->rowSize);
 
     for (row=0; row < dngProfile->rawheight; row ++)
     {
@@ -417,17 +401,17 @@ void DngWriter::processTight(TIFF *tif) {
         }
 
         if (TIFFWriteScanline(tif, pixel, row, 0) != 1) {
-            LOGD("Error writing TIFF scanline.");
+            logWriter("Error writing TIFF scanline.");
         }
     }
-    LOGD("Write done");
-    if(buffer != NULL)
+    logWriter("Write done");
+    if(buffer != nullptr)
     {
-        LOGD("Free Buffer");
+        logWriter("Free Buffer");
         free(buffer);
-        LOGD("Freed Buffer");
+        logWriter("Freed Buffer");
     }
-    LOGD("Mem Released");
+    logWriter("Mem Released");
 }
 
 //shift 10bit mipi into 10bit readable raw data
@@ -437,7 +421,7 @@ void DngWriter::process10tight(TIFF *tif) {
     int realrowsize;
     int shouldberowsize;
     unsigned char* out;
-    LOGD("writer-RowSize: %d  rawheight:%d ,rawwidht: %d", rawSize, dngProfile->rawheight,
+    logWriter("writer-RowSize: %d  rawheight:%d ,rawwidht: %d", rawSize, dngProfile->rawheight,
          dngProfile->rawwidht);
 
     realrowsize = -(-5 * dngProfile->rawwidht >> 5) << 3;
@@ -446,15 +430,15 @@ void DngWriter::process10tight(TIFF *tif) {
         shouldberowsize = dngProfile->rawwidht * 10 / 8;
         bytesToSkip = realrowsize - shouldberowsize;
     }
-    LOGD("realrow: %i shoudlbe: %i", realrowsize, shouldberowsize);
-    LOGD("width: %i height: %i", dngProfile->rawwidht, dngProfile->rawheight);
-    LOGD("bytesToSkip: %i", bytesToSkip);
+    logWriter("realrow: %i shoudlbe: %i", realrowsize, shouldberowsize);
+    logWriter("width: %i height: %i", dngProfile->rawwidht, dngProfile->rawheight);
+    logWriter("bytesToSkip: %i", bytesToSkip);
 
     int row = shouldberowsize;
     out = new unsigned char[shouldberowsize*dngProfile->rawheight];
-    if(out == NULL)
+    if(out == nullptr)
     {
-        LOGD("failed to set buffer");
+        logWriter("failed to set buffer");
         return;
     }
 
@@ -474,20 +458,20 @@ void DngWriter::process10tight(TIFF *tif) {
         out[m++] = (ar[i+3]& 0b00111111)<<2 | (ar[i+4]& 0b11000000)>>6;//110100 00
     }
     TIFFWriteRawStrip(tif, 0, out, dngProfile->rawheight*shouldberowsize);
-    LOGD("Finalizng DNG");
+    logWriter("Finalizng DNG");
     delete[] out;
 }
 
 void DngWriter::process12tight(TIFF *tif) {
     unsigned char* ar = bayerBytes;
     int bytesToSkip = 0;
-    LOGD("writer-RowSize: %d  rawheight:%d ,rawwidht: %d",  rawSize,dngProfile->rawheight, dngProfile->rawwidht);
+    logWriter("writer-RowSize: %d  rawheight:%d ,rawwidht: %d",  rawSize,dngProfile->rawheight, dngProfile->rawwidht);
     int realrowsize = rawSize/dngProfile->rawheight;
     int shouldberowsize = dngProfile->rawwidht*12/8;
-    LOGD("realrow: %i shoudlbe: %i", realrowsize, shouldberowsize);
+    logWriter("realrow: %i shoudlbe: %i", realrowsize, shouldberowsize);
     if (realrowsize != shouldberowsize)
         bytesToSkip = realrowsize - shouldberowsize;
-    LOGD("bytesToSkip: %i", bytesToSkip);
+    logWriter("bytesToSkip: %i", bytesToSkip);
     int row = shouldberowsize;
     unsigned char* out = new unsigned char[shouldberowsize*dngProfile->rawheight];
     int m = 0;
@@ -503,7 +487,7 @@ void DngWriter::process12tight(TIFF *tif) {
         out[m++] = (ar[i+1]& 0b00001111 )<< 4 | (ar[i+2] & 0b00001111 ) >>4 ;// 10 01 0011
     }
     TIFFWriteRawStrip(tif, 0, out, dngProfile->rawheight*shouldberowsize);
-    LOGD("Finalizng DNG");
+    logWriter("Finalizng DNG");
     delete[] out;
 }
 
@@ -517,9 +501,9 @@ void DngWriter::processLoose(TIFF *tif) {
     dngProfile->rowSize= (dngProfile->rawwidht+5)/6 << 3;
     buffer =(unsigned char *)malloc(dngProfile->rowSize);
     memset( buffer, 0, dngProfile->rowSize);
-    if (buffer == NULL)
+    if (buffer == nullptr)
     {
-        LOGD("allocating buffer failed try again");
+        logWriter("allocating buffer failed try again");
         buffer =(unsigned char *)malloc(dngProfile->rowSize);
     }
     for (row=0; row < dngProfile->rawheight; row ++)
@@ -546,18 +530,18 @@ void DngWriter::processLoose(TIFF *tif) {
 
         }
         if (TIFFWriteScanline (tif, pixel, row, 0) != 1) {
-            LOGD("Error writing TIFF scanline.");
+            logWriter("Error writing TIFF scanline.");
         }
     }
-    LOGD("Free Memory processLoose");
-    if(buffer != NULL)
+    logWriter("Free Memory processLoose");
+    if(buffer != nullptr)
     {
-        LOGD("Free Buffer");
+        logWriter("Free Buffer");
         free(buffer);
-        LOGD("Freed Buffer");
+        logWriter("Freed Buffer");
     }
 
-    LOGD("Mem Released");
+    logWriter("Mem Released");
 }
 
 void DngWriter::processSXXX16(TIFF *tif) {
@@ -580,15 +564,15 @@ void DngWriter::processSXXX16(TIFF *tif) {
             pixel2[col] =  high << 8 |low;
         }
         if (TIFFWriteScanline (tif, pixel, row, 0) != 1) {
-            LOGD("Error writing TIFF scanline.");
+            logWriter("Error writing TIFF scanline.");
         }
         if (TIFFWriteScanline (tif, pixel2, row+1, 0) != 1) {
-            LOGD("Error writing TIFF scanline.");
+            logWriter("Error writing TIFF scanline.");
         }
     }
 
-    LOGD("Finalizng DNG");
-    LOGD("Free Memory processSXXX16");
+    logWriter("Finalizng DNG");
+    logWriter("Free Memory processSXXX16");
 }
 
 //taken from https://github.com/ifb/makeDNG
@@ -597,26 +581,26 @@ void DngWriter::process16ToLossless(TIFF *tiff) {
     int width = dngProfile->rawwidht;
     int halfwidth = width/2;
     TIFFSetField( tiff, TIFFTAG_TILEWIDTH, halfwidth);
-    LOGD("wrote TIFFTAG_TILEWIDTH %i", halfwidth);
+    logWriter("wrote TIFFTAG_TILEWIDTH %i", halfwidth);
     TIFFSetField( tiff, TIFFTAG_TILELENGTH, height);
-    LOGD("wrote TIFFTAG_TILELENGTH %i", height);
-    LOGD("width %i", width);
+    logWriter("wrote TIFFTAG_TILELENGTH %i", height);
+    logWriter("width %i", width);
     int ret = 0;
     uint8_t* input = bayerBytes;
-    uint8_t* encoded = NULL;
+    uint8_t* encoded = nullptr;
     int encodedLength = 0;
-    ret = lj92_encode( (uint16_t*)&input[0], halfwidth, height, 10, halfwidth, halfwidth, NULL, 0, &encoded, &encodedLength );
+    ret = lj92_encode( (uint16_t*)&input[0], halfwidth, height, 10, halfwidth, halfwidth, nullptr, 0, &encoded, &encodedLength );
     TIFFWriteRawTile(tiff, 0, encoded, encodedLength );
-    LOGD("endcoded tile 0: %i", encodedLength);
+    logWriter("endcoded tile 0: %i", encodedLength);
     free( encoded );
-    ret = lj92_encode( (uint16_t*)&input[width], halfwidth, height, 10, halfwidth, halfwidth, NULL, 0, &encoded, &encodedLength );
+    ret = lj92_encode( (uint16_t*)&input[width], halfwidth, height, 10, halfwidth, halfwidth, nullptr, 0, &encoded, &encodedLength );
     TIFFWriteRawTile(tiff, 1, encoded, encodedLength );
-    LOGD("encoded tile 1: %i", encodedLength);
+    logWriter("encoded tile 1: %i", encodedLength);
     free( encoded );
 }
 
 void DngWriter::processSXXX16crop(TIFF *tif) {
-    LOGD("processSXXX16crop");
+    logWriter("processSXXX16crop");
     int j, row, col, j2;
     unsigned short pixel[crop_width];
     unsigned short low, high;
@@ -624,7 +608,7 @@ void DngWriter::processSXXX16crop(TIFF *tif) {
     int h_diff = dngProfile->rawheight - crop_height;
     int offset_x = w_diff/2;
     int offset_y = h_diff/2;
-    LOGD("crop w: %i h: %i offset x: %i y: %i" ,crop_width,crop_height, offset_x,offset_y);
+    logWriter("crop w: %i h: %i offset x: %i y: %i" ,crop_width,crop_height, offset_x,offset_y);
     j=0;
     j2 = 0;
     for (row=offset_y; row < dngProfile->rawheight-offset_y; row++)
@@ -638,12 +622,12 @@ void DngWriter::processSXXX16crop(TIFF *tif) {
             pixel[j++] =  high << 8 |low;
         }
         if (TIFFWriteScanline (tif, pixel, j2++, 0) != 1) {
-            LOGD("Error writing TIFF scanline.");
+            logWriter("Error writing TIFF scanline.");
         }
     }
 
-    LOGD("Finalizng DNG");
-    LOGD("Free Memory processSXXX16crop");
+    logWriter("Finalizng DNG");
+    logWriter("Free Memory processSXXX16crop");
 }
 
 unsigned short DngWriter::getColor(int row, int col)
@@ -708,21 +692,21 @@ void DngWriter::quadBayer16bit(TIFF *tif) {
 
         }
         if (TIFFWriteScanline (tif, pixel, row, 0) != 1) {
-            LOGD("Error writing TIFF scanline.");
+            logWriter("Error writing TIFF scanline.");
         }
         if (TIFFWriteScanline (tif, pixel2, row+1, 0) != 1) {
-            LOGD("Error writing TIFF scanline.");
+            logWriter("Error writing TIFF scanline.");
         }
         if (TIFFWriteScanline (tif, pixel3, row+2, 0) != 1) {
-            LOGD("Error writing TIFF scanline.");
+            logWriter("Error writing TIFF scanline.");
         }
         if (TIFFWriteScanline (tif, pixel4, row+3, 0) != 1) {
-            LOGD("Error writing TIFF scanline.");
+            logWriter("Error writing TIFF scanline.");
         }
     }
 
-    LOGD("Finalizng DNG");
-    LOGD("Free Memory quadBayer16bit");
+    logWriter("Finalizng DNG");
+    logWriter("Free Memory quadBayer16bit");
 }
 
 void DngWriter::process16to10(TIFF *tif) {
@@ -742,24 +726,24 @@ void DngWriter::process16to10(TIFF *tif) {
         B_ar[0] = byts[j];
         B_ar[1] = byts[j+1];
 #ifdef LOG_RAW_DATA
-        LOGD("P:%i B0:%s%s,B1:%s%s", i, bit_rep[B_ar[0] >> 4], bit_rep[B_ar[0] & 0x0F], bit_rep[B_ar[1] >> 4], bit_rep[B_ar[1] & 0x0F]);
+        logWriter("P:%i B0:%s%s,B1:%s%s", i, bit_rep[B_ar[0] >> 4], bit_rep[B_ar[0] & 0x0F], bit_rep[B_ar[1] >> 4], bit_rep[B_ar[1] & 0x0F]);
 #endif
 
         G1_ar[0] = byts[j+2];
         G1_ar[1] = byts[j+3];
 #ifdef LOG_RAW_DATA
-        LOGD("P:%i G10:%s%s,G11:%s%s", i, bit_rep[G1_ar[0] >> 4], bit_rep[G1_ar[0] & 0x0F], bit_rep[G1_ar[1] >> 4], bit_rep[G1_ar[1] & 0x0F]);
+        logWriter("P:%i G10:%s%s,G11:%s%s", i, bit_rep[G1_ar[0] >> 4], bit_rep[G1_ar[0] & 0x0F], bit_rep[G1_ar[1] >> 4], bit_rep[G1_ar[1] & 0x0F]);
 #endif
         G2_ar[0] = byts[j+4];
         G2_ar[1] = byts[j+5];
 #ifdef LOG_RAW_DATA
-        LOGD("P:%i G20:%s%s,G21:%s%s", i, bit_rep[G2_ar[0] >> 4], bit_rep[G2_ar[0] & 0x0F], bit_rep[G2_ar[1] >> 4], bit_rep[G2_ar[1] & 0x0F]);
+        logWriter("P:%i G20:%s%s,G21:%s%s", i, bit_rep[G2_ar[0] >> 4], bit_rep[G2_ar[0] & 0x0F], bit_rep[G2_ar[1] >> 4], bit_rep[G2_ar[1] & 0x0F]);
 #endif
 
         R_ar[0] = byts[j+6];
         R_ar[1] = byts[j+7];
 #ifdef LOG_RAW_DATA
-        LOGD("P:%i R0:%s%s,R1:%s%s", i, bit_rep[R_ar[0] >> 4], bit_rep[R_ar[0] & 0x0F], bit_rep[R_ar[1] >> 4], bit_rep[R_ar[1] & 0x0F]);
+        logWriter("P:%i R0:%s%s,R1:%s%s", i, bit_rep[R_ar[0] >> 4], bit_rep[R_ar[0] & 0x0F], bit_rep[R_ar[1] >> 4], bit_rep[R_ar[1] & 0x0F]);
 #endif
         j+=8;
 
@@ -775,9 +759,9 @@ void DngWriter::process16to10(TIFF *tif) {
         pixel[i+4] = R_ar[0]; //44444444
     }
     TIFFWriteRawStrip(tif, 0, pixel, dngProfile->rawheight*rowsizeInBytes);
-    LOGD("Finalizng DNG");
+    logWriter("Finalizng DNG");
 
-    LOGD("Free Memory process16to10");
+    logWriter("Free Memory process16to10");
     delete[] pixel;
 }
 
@@ -798,24 +782,24 @@ void DngWriter::process16to12(TIFF *tif) {
         B_ar[0] = byts[j];
         B_ar[1] = byts[j+1];
 #ifdef LOG_RAW_DATA
-        LOGD("P:%i B0:%s%s,B1:%s%s", i, bit_rep[B_ar[0] >> 4], bit_rep[B_ar[0] & 0x0F], bit_rep[B_ar[1] >> 4], bit_rep[B_ar[1] & 0x0F]);
+        logWriter("P:%i B0:%s%s,B1:%s%s", i, bit_rep[B_ar[0] >> 4], bit_rep[B_ar[0] & 0x0F], bit_rep[B_ar[1] >> 4], bit_rep[B_ar[1] & 0x0F]);
 #endif
 
         G1_ar[0] = byts[j+2];
         G1_ar[1] = byts[j+3];
 #ifdef LOG_RAW_DATA
-        LOGD("P:%i G10:%s%s,G11:%s%s", i, bit_rep[G1_ar[0] >> 4], bit_rep[G1_ar[0] & 0x0F], bit_rep[G1_ar[1] >> 4], bit_rep[G1_ar[1] & 0x0F]);
+        logWriter("P:%i G10:%s%s,G11:%s%s", i, bit_rep[G1_ar[0] >> 4], bit_rep[G1_ar[0] & 0x0F], bit_rep[G1_ar[1] >> 4], bit_rep[G1_ar[1] & 0x0F]);
 #endif
         G2_ar[0] = byts[j+4];
         G2_ar[1] = byts[j+5];
 #ifdef LOG_RAW_DATA
-        LOGD("P:%i G20:%s%s,G21:%s%s", i, bit_rep[G2_ar[0] >> 4], bit_rep[G2_ar[0] & 0x0F], bit_rep[G2_ar[1] >> 4], bit_rep[G2_ar[1] & 0x0F]);
+        logWriter("P:%i G20:%s%s,G21:%s%s", i, bit_rep[G2_ar[0] >> 4], bit_rep[G2_ar[0] & 0x0F], bit_rep[G2_ar[1] >> 4], bit_rep[G2_ar[1] & 0x0F]);
 #endif
 
         R_ar[0] = byts[j+6];
         R_ar[1] = byts[j+7];
 #ifdef LOG_RAW_DATA
-        LOGD("P:%i R0:%s%s,R1:%s%s", i, bit_rep[R_ar[0] >> 4], bit_rep[R_ar[0] & 0x0F], bit_rep[R_ar[1] >> 4], bit_rep[R_ar[1] & 0x0F]);
+        logWriter("P:%i R0:%s%s,R1:%s%s", i, bit_rep[R_ar[0] >> 4], bit_rep[R_ar[0] & 0x0F], bit_rep[R_ar[1] >> 4], bit_rep[R_ar[1] & 0x0F]);
 #endif
         j+=8;
 
@@ -834,98 +818,99 @@ void DngWriter::process16to12(TIFF *tif) {
         pixel[i+5] = R_ar[0]; //4444 4444
     }
     TIFFWriteRawStrip(tif, 0, pixel, dngProfile->rawheight*rowsizeInBytes);
-    LOGD("Finalizng DNG");
+    logWriter("Finalizng DNG");
 
-    LOGD("Free Memory process16to12");
+    logWriter("Free Memory process16to12");
     delete[] pixel;
 }
 
 
-void DngWriter::writeRawStuff(TIFF *tif) {
+void DngWriter::writeRawBuffer(TIFF *tif) {
     //**********************************************************************************
 
     if (compression == COMPRESSION_JPEG)
     {
         process16ToLossless(tif);
     }
-    else if(dngProfile->rawType == RAW_10BIT_TIGHT_SHIFT)
+    else if(dngProfile->rawType == DNG_10BIT_TIGHT_SHIFT)
     {
-        LOGD("Processing tight RAW data...");
+        logWriter("Processing tight RAW data...");
         process10tight(tif);
-        LOGD("Done tight RAW data...");
+        logWriter("Done tight RAW data...");
     }
-    else if (dngProfile->rawType == RAW_10BIT_LOOSE_SHIFT)
+    else if (dngProfile->rawType == DNG_10BIT_LOOSE_SHIFT)
     {
-        LOGD("Processing loose RAW data...");
+        logWriter("Processing loose RAW data...");
         processLoose(tif);
-        LOGD("Done loose RAW data...");
+        logWriter("Done loose RAW data...");
     }
-    else if (dngProfile->rawType == RAW_16BIT_TO_10BIT) {
-        LOGD("process16to10(tif);");
+    else if (dngProfile->rawType == DNG_16BIT_TO_10BIT) {
+        logWriter("process16to10(tif);");
         process16to10(tif);
     }
-    else if (dngProfile->rawType == RAW_10BIT_TO_16BIT) {
-        LOGD("processTight(tif);");
+    else if (dngProfile->rawType == DNG_10BIT_TO_16BIT) {
+        logWriter("processTight(tif);");
         processTight(tif);
     }
-    else if (dngProfile->rawType == RAW_12BIT_SHIFT) {
-        LOGD("process12tight");
+    else if (dngProfile->rawType == DNG_12BIT_SHIFT) {
+        logWriter("process12tight");
         process12tight(tif);
     }
-    else if (dngProfile->rawType == RAW_16BIT_TO_12BIT) {
-        LOGD("process16to12(tif);");
+    else if (dngProfile->rawType == DNG_16BIT_TO_12BIT) {
+        logWriter("process16to12(tif);");
         process16to12(tif);
     }
-    else if (dngProfile->rawType == RAW_16BIT)
+    else if (dngProfile->rawType == DNG_16BIT)
     {
         if (crop_width == 0 && crop_height == 0)
             processSXXX16(tif);
         else
             processSXXX16crop(tif);
     }
-    else if (dngProfile->rawType == QUADBAYER_16BIT)
+    else if (dngProfile->rawType == DNG_QUADBAYER_16BIT)
         quadBayer16bit(tif);
     else
-        LOGD("rawType is not implented");
+        logWriter("rawType is not implented");
 }
 
 
 void DngWriter::clear() {
-    LOGD("delete Opcode2");
-    opCode = NULL;
-    LOGD("delete bayerbytes");
-    /*if (bayerBytes != NULL){
+    logWriter("delete Opcode2");
+    opCode = nullptr;
+    logWriter("delete bayerbytes");
+    /*if (bayerBytes != nullptr){
         delete [] bayerBytes;
-        rawSize = NULL;
-        bayerBytes = NULL;
+        rawSize = nullptr;
+        bayerBytes = nullptr;
     }*/
-    LOGD("delete filesavepath");
-    if(fileSavePath != NULL)
+    logWriter("delete filesavepath");
+    if(fileSavePath != nullptr)
     {
         if(!hasFileDes)
             delete[] fileSavePath;
-        fileSavePath = NULL;
+        fileSavePath = nullptr;
     }
-    LOGD("delete exif");
-    if(exifInfo != NULL)
-        exifInfo = NULL;
-    LOGD("delete dngprofile");
-    if(dngProfile != NULL)
-        dngProfile = NULL;
-    LOGD("delete customMatrix");
-    if(customMatrix != NULL)
-        customMatrix = NULL;
-    fileDes = NULL;
-    thumbheight = NULL;
-    thumwidth = NULL;
+    logWriter("delete exif");
+    if(exifInfo != nullptr)
+        exifInfo = nullptr;
+    logWriter("delete dngprofile");
+    if(dngProfile != nullptr)
+        dngProfile = nullptr;
+    logWriter("delete customMatrix");
+    if(customMatrix != nullptr)
+        customMatrix = nullptr;
+
+    fileDes = 0;
+    thumbheight = 0;
+    thumwidth = 0;
 }
 
 void DngWriter::WriteDNG() {
-
-    LOGD("init ext tags");
-    LOGD("init ext tags done");
+    _XTIFFInitialize();
+    logWriter("init ext tags");
+    logWriter("init ext tags done");
     TIFF *tif;
-    LOGD("has file description: %b", hasFileDes);
+    logWriter("has file description: %b", hasFileDes);
     if(hasFileDes == true)
     {
         tif = openfTIFFFD("", fileDes);
@@ -933,39 +918,39 @@ void DngWriter::WriteDNG() {
     else
         tif = openfTIFF(fileSavePath);
 
-    LOGD("writeIfd0");
+    logWriter("writeIfd0");
     writeIfd0(tif);
 
-    if(opCode != NULL)
+    if(opCode != nullptr)
     {
         if(opCode->op2Size > 0)
         {
-            LOGD("Set OP2 %i", opCode->op2Size);
+            logWriter("Set OP2 %i", opCode->op2Size);
             TIFFSetField(tif, TIFFTAG_OPC2, opCode->op2Size, opCode->op2);
         }
         else
         {
-            LOGD("opcode2 null");
+            logWriter("opcode2 nullptr");
         }
         if(opCode->op3Size > 0)
         {
-            LOGD("Set OP3 %i", opCode->op3Size);
+            logWriter("Set OP3 %i", opCode->op3Size);
             TIFFSetField(tif, TIFFTAG_OPC3, opCode->op3Size, opCode->op3);
         }
         else
         {
-            LOGD("opcode3 null");
+            logWriter("opcode3 nullptr");
         }
     } else
     {
-        LOGD("opcode null");
+        logWriter("opcode nullptr");
     }
-    LOGD("writeRawStuff");
-    writeRawStuff(tif);
+    logWriter("writeRawBuffer");
+    writeRawBuffer(tif);
 
     TIFFWriteDirectory(tif);
-    LOGD("set exif");
-    if(exifInfo != NULL)
+    logWriter("set exif");
+    if(exifInfo != nullptr)
     {
         uint64 exif_offset = 0;
         TIFFCreateEXIFDirectory(tif);
@@ -976,17 +961,17 @@ void DngWriter::WriteDNG() {
         TIFFRewriteDirectory(tif);
     }
 
-    if(gpsInfo != NULL)
+    if(gpsInfo != nullptr)
     {
         uint64 gps_offset = 0;
-        LOGD("makeGPSIFD");
+        logWriter("makeGPSIFD");
         makeGPS_IFD(tif);
-        LOGD("TIFFWriteCustomDirectory");
+        logWriter("TIFFWriteCustomDirectory");
         TIFFWriteCustomDirectory(tif, &gps_offset);
         // set GPSIFD tag
-        LOGD("TIFFSetDirectory");
+        logWriter("TIFFSetDirectory");
         TIFFSetDirectory(tif, 0);
-        LOGD("setgpsoffset");
+        logWriter("setgpsoffset");
         TIFFSetField (tif, TIFFTAG_GPSIFD, gps_offset);
 
     }
@@ -994,5 +979,6 @@ void DngWriter::WriteDNG() {
     TIFFClose(tif);
 
 
-    LOGD("DONE");
+    logWriter("DONE");
 }
+

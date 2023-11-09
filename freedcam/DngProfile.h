@@ -13,7 +13,7 @@ public:
     char* bayerformat;
     int rawType;
     int rawwidht, rawheight, rowSize;
-    unsigned int  * activearea;
+    unsigned int* activearea;
 
     void clear()
     {

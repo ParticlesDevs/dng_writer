@@ -14,8 +14,8 @@ file(DOWNLOAD
 ${CMAKE_CURRENT_SOURCE_DIR}/deps/stb_image_write.h)
 
 file(DOWNLOAD
-        https://raw.githubusercontent.com/martinhering/liblj92/master/lj92.h
+        https://raw.githubusercontent.com/ilia3101/MLV-App/master/src/mlv/liblj92/lj92.h
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/lj92.h)
 file(DOWNLOAD
-        https://raw.githubusercontent.com/martinhering/liblj92/master/lj92.c
+        https://raw.githubusercontent.com/ilia3101/MLV-App/master/src/mlv/liblj92/lj92.c
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/lj92.c)

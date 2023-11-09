@@ -9,22 +9,22 @@ class CustomMatrix
 public:
     float *colorMatrix1;
     float *colorMatrix2;
-    float *neutralColorMatrix;
+    float *neutralColorVector;
     float *fowardMatrix1;
     float *fowardMatrix2;
-    float *reductionMatrix1;
-    float *reductionMatrix2;
+    float *calibrationMatrix1;
+    float *calibrationMatrix2;
     double *noiseMatrix;
 
     CustomMatrix()
     {
         colorMatrix1 = nullptr;
         colorMatrix2 = nullptr;
-        neutralColorMatrix = nullptr;
+        neutralColorVector = nullptr;
         fowardMatrix1 = nullptr;
         fowardMatrix2 = nullptr;
-        reductionMatrix1 = nullptr;
-        reductionMatrix2 = nullptr;
+        calibrationMatrix1 = nullptr;
+        calibrationMatrix2 = nullptr;
         noiseMatrix = nullptr;
     }
 
@@ -40,10 +40,10 @@ public:
             delete[] colorMatrix2;
             colorMatrix2 = nullptr;
         }
-        if(neutralColorMatrix != nullptr)
+        if(neutralColorVector != nullptr)
         {
-            delete[] neutralColorMatrix;
-            neutralColorMatrix = nullptr;
+            delete[] neutralColorVector;
+            neutralColorVector = nullptr;
         }
         if(fowardMatrix1 != nullptr)
         {
@@ -55,20 +55,20 @@ public:
             delete[] fowardMatrix2;
             fowardMatrix2 = nullptr;
         }
-        if(reductionMatrix1 != nullptr)
+        if(calibrationMatrix1 != nullptr)
         {
-            delete[] reductionMatrix1;
-            reductionMatrix1 = nullptr;
+            delete[] calibrationMatrix1;
+            calibrationMatrix1 = nullptr;
         }
-        if(reductionMatrix2 != nullptr)
+        if(calibrationMatrix2 != nullptr)
         {
-            delete[] reductionMatrix2;
-            reductionMatrix2 = nullptr;
+            delete[] calibrationMatrix2;
+            calibrationMatrix2 = nullptr;
         }
-        if(reductionMatrix2 != nullptr)
+        if(calibrationMatrix2 != nullptr)
         {
-            delete[] reductionMatrix2;
-            reductionMatrix2 = nullptr;
+            delete[] calibrationMatrix2;
+            calibrationMatrix2 = nullptr;
         }
         if(noiseMatrix != nullptr)
         {
