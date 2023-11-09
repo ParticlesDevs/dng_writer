@@ -7,10 +7,10 @@ SET(MY_C_FLAGS   ${MY_C_FLAGS}   ${MY_C_AND_CXX_FLAGS})
 SET(MY_CXX_FLAGS ${MY_CXX_FLAGS} ${MY_C_AND_CXX_FLAGS})
 
 include(loadDeps.cmake)
-include_directories(freedcam deps)
+include_directories(dngwriter deps)
 
 add_library(dngwriter SHARED
-        freedcam/DngWriter.cpp
+        dngwriter/DngWriter.cpp
         deps/lj92.c
 )
 
