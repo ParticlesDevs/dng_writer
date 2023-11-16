@@ -122,10 +122,10 @@ void DngWriter::writeIfd0(TIFF *tif) {
     TIFFSetField(tif, TIFFTAG_FILLORDER, FILLORDER_MSB2LSB);
     if(exifInfo != nullptr)
         TIFFSetField(tif, TIFFTAG_IMAGEDESCRIPTION, exifInfo->_imagedescription);
-    TIFFSetField(tif, TIFFTAG_MAKE, _make);
-    logWriter("make %s", _make);
-    TIFFSetField(tif, TIFFTAG_MODEL, _model);
-    logWriter("model %s",_model);
+    TIFFSetField(tif, TIFFTAG_MAKE, make);
+    logWriter("make %s", make);
+    TIFFSetField(tif, TIFFTAG_MODEL, model);
+    logWriter("model %s",model);
     if (exifInfo != nullptr)
     {
         try
@@ -149,22 +149,23 @@ void DngWriter::writeIfd0(TIFF *tif) {
         TIFFSetField(tif, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);
     TIFFSetField (tif, TIFFTAG_SAMPLESPERPIXEL, 1);
     logWriter("sampelsperpixel %i" ,1);
-    TIFFSetField( tif, TIFFTAG_XRESOLUTION, 7200);
-    TIFFSetField( tif, TIFFTAG_YRESOLUTION, 7200);
+    TIFFSetField( tif, TIFFTAG_XRESOLUTION, 72.f);
+    TIFFSetField( tif, TIFFTAG_YRESOLUTION, 72.f);
     TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
     TIFFSetField(tif, TIFFTAG_RESOLUTIONUNIT, RESUNIT_INCH);
-    TIFFSetField(tif, TIFFTAG_SOFTWARE, "FreeDcam DNG Writer 2023");
-    if(_dateTime != nullptr)
-        TIFFSetField(tif,TIFFTAG_DATETIME, _dateTime);
+    if(software != nullptr)
+        TIFFSetField(tif, TIFFTAG_SOFTWARE, "DNG Writer");
+    if(dateTime != nullptr)
+        TIFFSetField(tif,TIFFTAG_DATETIME, dateTime);
     TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
     //30k
     TIFFSetField(tif, TIFFTAG_CFAREPEATPATTERNDIM, CFARepeatPatternDim);
     TIFFSetField(tif, TIFFTAG_CFAPATTERN, 4, cfa);
     TIFFSetField(tif, TIFFTAG_EP_STANDARD_ID, "\001\000\0\0");
     //50k
-    if(_model != nullptr){
-        TIFFSetField(tif, TIFFTAG_UNIQUECAMERAMODEL, _model);
-        logWriter("CameraModel %s",_model);
+    if(model != nullptr){
+        TIFFSetField(tif, TIFFTAG_UNIQUECAMERAMODEL, model);
+        logWriter("CameraModel %s",model);
     }
     TIFFSetField( tif, TIFFTAG_CFAPLANECOLOR, 3, "\00\01\02" ); // RGB
     TIFFSetField( tif, TIFFTAG_CFALAYOUT, 1 );
@@ -208,7 +209,7 @@ void DngWriter::writeIfd0(TIFF *tif) {
     }
     else
     {
-        int active_area[] = {0,0,width,height};
+        int active_area[] = {0,0,height,width};
         logWriter("activearea %i %i %i %i", active_area[0],active_area[1],active_area[2],active_area[3]);
         TIFFSetField(tif,TIFFTAG_ACTIVEAREA, active_area);
     }
@@ -904,9 +905,21 @@ void DngWriter::clear() {
     thumbheight = 0;
     thumwidth = 0;
 }
+int (*logWriterLocal)(const char* format, ...);
+int errorHandler(const char* module, const char* fmt, va_list ap)
+{
+    char buf[1024];
+    logWriterLocal("Module: %s: ", module);
+    vsprintf(buf, fmt, ap);
+    logWriterLocal("Value: %s", buf);
+    return 0;
+}
 
 void DngWriter::WriteDNG() {
     _XTIFFInitialize();
+    logWriterLocal = logWriter;
+    TIFFSetWarningHandler(reinterpret_cast<TIFFErrorHandler>(errorHandler));
+    TIFFSetErrorHandler(reinterpret_cast<TIFFErrorHandler>(errorHandler));
     logWriter("init ext tags");
     logWriter("init ext tags done");
     TIFF *tif;

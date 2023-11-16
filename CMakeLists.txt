@@ -15,10 +15,13 @@ add_library(dngwriter SHARED
 )
 
 include_directories(${TIFF_INCLUDE_DIR})
+
+install(TARGETS dngwriter DESTINATION lib)
+
 target_link_libraries(dngwriter tiff)
 
-add_executable(test
+add_executable(dngWritertest
         test.cpp
 )
 
-target_link_libraries(test tiff dngwriter)
+target_link_libraries(dngWritertest tiff dngwriter)

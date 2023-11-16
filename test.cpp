@@ -25,8 +25,8 @@ int main(){
         dngprofile->blacklevel[i] = 0.f;
     }
     dngprofile->whitelevel = 65535;
-    dngprofile->rawwidht = 512;
-    dngprofile->rawheight = 512;
+    dngprofile->rawwidht = 4096;
+    dngprofile->rawheight = 3072;
     dngprofile->rowSize = 0;
 
     /*char cfaar[4];
@@ -55,23 +55,6 @@ int main(){
 
     dngprofile->rawType = DNG_16BIT;
 
-
-    /*matrix->colorMatrix1 = new float[9];
-    matrix->colorMatrix2 = new float[9];
-    matrix->neutralColorVector = new float[3];
-    matrix->fowardMatrix1 = new float[9];
-    matrix->fowardMatrix2 = new float[9];
-    matrix->calibrationMatrix1 = new float[9];
-    matrix->calibrationMatrix2 = new float[9];*/
-
-    /*copyMatrix(matrix->colorMatrix1, raw.imgdata.color.dng_color[0].colormatrix);
-    copyMatrix(matrix->colorMatrix2, raw.imgdata.color.dng_color[1].colormatrix);
-    copyMatrix(matrix->neutralColorVector, raw.imgdata.color.cam_mul);
-    copyMatrix(matrix->fowardMatrix1, raw.imgdata.color.dng_color[0].forwardmatrix);
-    copyMatrix(matrix->fowardMatrix2, raw.imgdata.color.dng_color[1].forwardmatrix);
-    copyMatrix(matrix->calibrationMatrix1, raw.imgdata.color.dng_color[0].calibration);
-    copyMatrix(matrix->calibrationMatrix2, raw.imgdata.color.dng_color[1].calibration);
-    cout << "copy colormatrix end:" << filename << "\n";*/
     float ncv[] = {1,1,1};
     matrix->neutralColorVector = ncv;
     float idm[] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
@@ -82,12 +65,12 @@ int main(){
     matrix->calibrationMatrix1 = idm;
     matrix->calibrationMatrix2 = idm;
 
-    size_t width = 512;
-    size_t height = 512;
+    size_t width = dngprofile->rawwidht;
+    size_t height = dngprofile->rawheight;
     auto outBuff = new uint16_t[width*height];
-    for(int i =0; i<width; i++){
-        for(int j =0; j<height; j++){
-            outBuff[i*height+j] = uint16_t(65535.f*(float(i)/float(width - 1) + float(j)/float(height - 1))/2.f);
+    for(int i =0; i<height; i++){
+        for(int j =0; j<width; j++){
+            outBuff[i*width+j] = uint16_t(65535.f*(float(i)/float(height - 1) + float(j)/float(width - 1))/2.f);
         }
     }
 
@@ -96,10 +79,11 @@ int main(){
     dngw->dngProfile = dngprofile;
     dngw->customMatrix = matrix;
     dngw->bayerBytes = reinterpret_cast<unsigned char*>(outBuff);
-    dngw->rawSize = 512*512*2;
+    dngw->rawSize = dngprofile->rawwidht*dngprofile->rawheight*2;
     dngw->fileSavePath = (char*)"./test.dng";
-    dngw->_make = "make";
-    dngw->_model = "model";
+    dngw->make = "make";
+    dngw->model = "model";
+    dngw->software = "software";
 
     dngw->WriteDNG();
 }

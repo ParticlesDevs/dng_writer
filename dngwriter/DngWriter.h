@@ -68,10 +68,12 @@ public:
     GpsInfo *gpsInfo;
     DngProfile * dngProfile;
     CustomMatrix * customMatrix;
-    OpCode * opCode = NULL;
-    char* _make = NULL;
-    char*_model = NULL;
-    char* _dateTime = NULL;
+    OpCode * opCode = nullptr;
+    const char* make = nullptr;
+    const char* model = nullptr;
+    const char* dateTime = nullptr;
+    const char* software = nullptr;
+
 
     long rawSize{};
 
