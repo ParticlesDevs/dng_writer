@@ -42,6 +42,7 @@ class DngWriter
 {
 
 private:
+    int bpp = 10;
     int (*logWriter)(const char* format, ...);
     //open tiff from filepath
     TIFF *openfTIFF(char* fileSavePath);

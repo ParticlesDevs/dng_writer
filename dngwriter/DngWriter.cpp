@@ -43,7 +43,7 @@ TIFF* DngWriter::openfTIFFFD(char *fileSavePath, int fd) {
 }
 
 void DngWriter::writeIfd0(TIFF *tif) {
-    int width,height,bits_per_sample, photometric;
+    int width,height, photometric;
 
     if (crop_width == 0 && crop_height == 0)
     {
@@ -60,12 +60,11 @@ void DngWriter::writeIfd0(TIFF *tif) {
        || dngProfile->rawType == DNG_10BIT_TO_16BIT
        || dngProfile->rawType == DNG_16BIT
        || dngProfile->rawType == DNG_QUADBAYER_16BIT && dngProfile->rawType == DNG_16_TO_LOSSLESS)
-        bits_per_sample = 16;
+        bpp = 16;
     else if (dngProfile->rawType == DNG_12BIT_SHIFT || dngProfile->rawType == DNG_16BIT_TO_12BIT)
-        bits_per_sample = 12;
+        bpp = 12;
     else
-        bits_per_sample = 10;
-    logWriter("bitspersample %i", bits_per_sample);
+        bpp = 10;
 
     if(dngProfile->rawType == DNG_16_TO_LOSSLESS)
         compression = COMPRESSION_JPEG;
@@ -112,8 +111,8 @@ void DngWriter::writeIfd0(TIFF *tif) {
     TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width);
     TIFFSetField(tif, TIFFTAG_IMAGELENGTH, height);
     logWriter("width x height:  %i x %i", width,height);
-    TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, bits_per_sample);
-    logWriter("bitspersample %i", bits_per_sample);
+    TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, bpp);
+    logWriter("bitspersample %i", bpp);
     TIFFSetField(tif, TIFFTAG_COMPRESSION, compression);
     logWriter("Compression %i", compression);
     TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, photometric);
@@ -580,21 +579,22 @@ void DngWriter::processSXXX16(TIFF *tif) {
 void DngWriter::process16ToLossless(TIFF *tiff) {
     int height = dngProfile->rawheight;
     int width = dngProfile->rawwidht;
-    int halfwidth = width/2;
-    TIFFSetField( tiff, TIFFTAG_TILEWIDTH, halfwidth);
-    logWriter("wrote TIFFTAG_TILEWIDTH %i", halfwidth);
-    TIFFSetField( tiff, TIFFTAG_TILELENGTH, height);
+    int new_width = int(width / 2);
+    int new_height = int(height);
+    TIFFSetField( tiff, TIFFTAG_TILEWIDTH, uint32_t(new_width));
+    logWriter("wrote TIFFTAG_TILEWIDTH %i", new_width);
+    TIFFSetField( tiff, TIFFTAG_TILELENGTH, uint32_t(height));
     logWriter("wrote TIFFTAG_TILELENGTH %i", height);
     logWriter("width %i", width);
     int ret = 0;
     uint8_t* input = bayerBytes;
     uint8_t* encoded = nullptr;
     int encodedLength = 0;
-    ret = lj92_encode( (uint16_t*)&input[0], halfwidth, height, 10, halfwidth, halfwidth, nullptr, 0, &encoded, &encodedLength );
+    ret = lj92_encode( (uint16_t*)&input[0], new_width, new_height, bpp, new_width, new_width, nullptr, 0, &encoded, &encodedLength );
     TIFFWriteRawTile(tiff, 0, encoded, encodedLength );
     logWriter("endcoded tile 0: %i", encodedLength);
     free( encoded );
-    ret = lj92_encode( (uint16_t*)&input[width], halfwidth, height, 10, halfwidth, halfwidth, nullptr, 0, &encoded, &encodedLength );
+    ret = lj92_encode( (uint16_t*)&input[width], new_width, new_height, bpp, new_width, new_width, nullptr, 0, &encoded, &encodedLength );
     TIFFWriteRawTile(tiff, 1, encoded, encodedLength );
     logWriter("encoded tile 1: %i", encodedLength);
     free( encoded );

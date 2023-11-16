@@ -25,8 +25,8 @@ int main(){
         dngprofile->blacklevel[i] = 0.f;
     }
     dngprofile->whitelevel = 65535;
-    dngprofile->rawwidht = 4096;
-    dngprofile->rawheight = 3072;
+    dngprofile->rawwidht = 4000;
+    dngprofile->rawheight = 3000;
     dngprofile->rowSize = 0;
 
     /*char cfaar[4];
@@ -75,7 +75,7 @@ int main(){
     }
 
     DngWriter *dngw = new DngWriter(printfln);
-
+    dngw->compression = COMPRESSION_JPEG;
     dngw->dngProfile = dngprofile;
     dngw->customMatrix = matrix;
     dngw->bayerBytes = reinterpret_cast<unsigned char*>(outBuff);
