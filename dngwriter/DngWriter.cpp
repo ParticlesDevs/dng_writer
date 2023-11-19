@@ -610,7 +610,7 @@ void DngWriter::process16ToLossless(TIFF *tiff) {
     for(int i = 0; i<ty; i++)
     {
         for(int j = 0; j<1; j++) {
-            ret = lj92_encode(&input[j*0 + i*new_width*128], new_width, 128, bpp, 128 * new_width, 0, nullptr, 0, &encoded, &encodedLength);
+            ret = lj92_encode(&paddedImage[j*0 + i*new_width*128], new_width, 128, bpp, 128 * new_width, 0, nullptr, 0, &encoded, &encodedLength);
             //ret = lj92_encode(input, new_width, new_height, bpp, new_width * new_height, 0, nullptr, 0, &encoded, &encodedLength);
             // Write the encoded tile to the TIFF file
             TIFFWriteRawTile(tiff, cnt, encoded, encodedLength);
