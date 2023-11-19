@@ -575,29 +575,100 @@ void DngWriter::processSXXX16(TIFF *tif) {
     logWriter("Free Memory processSXXX16");
 }
 
-//taken from https://github.com/ifb/makeDNG
 void DngWriter::process16ToLossless(TIFF *tiff) {
     int height = dngProfile->rawheight;
     int width = dngProfile->rawwidht;
-    int new_width = int(width / 2);
-    int new_height = int(height);
-    TIFFSetField( tiff, TIFFTAG_TILEWIDTH, uint32_t(new_width));
-    logWriter("wrote TIFFTAG_TILEWIDTH %i", new_width);
-    TIFFSetField( tiff, TIFFTAG_TILELENGTH, uint32_t(height));
-    logWriter("wrote TIFFTAG_TILELENGTH %i", height);
-    logWriter("width %i", width);
+
+    // Calculate new dimensions that are multiples of 128
+    int new_width = (width + 127) / 128 * 128;
+    int new_height = (height + 127) / 128 * 128;
+    int tx = new_width/128;
+    int ty = new_height/128;
+
+    TIFFSetField(tiff, TIFFTAG_TILEWIDTH, uint32_t(new_width));
+    logWriter("wrote TIFFTAG_TILEWIDTH %i", 128);
+    TIFFSetField(tiff, TIFFTAG_TILELENGTH, uint32_t(128));
+    logWriter("wrote TIFFTAG_TILELENGTH %i", 128);
+
+    logWriter("new_width %i new_height %i", new_width, new_height);
+
     int ret = 0;
-    uint8_t* input = bayerBytes;
-    uint8_t* encoded = nullptr;
+    auto input = (uint16_t*) bayerBytes;
+    uint8_t *encoded = nullptr;
     int encodedLength = 0;
-    ret = lj92_encode( (uint16_t*)&input[0], new_width, new_height, bpp, new_width, new_width, nullptr, 0, &encoded, &encodedLength );
-    TIFFWriteRawTile(tiff, 0, encoded, encodedLength );
-    logWriter("endcoded tile 0: %i", encodedLength);
-    free( encoded );
-    ret = lj92_encode( (uint16_t*)&input[width], new_width, new_height, bpp, new_width, new_width, nullptr, 0, &encoded, &encodedLength );
-    TIFFWriteRawTile(tiff, 1, encoded, encodedLength );
-    logWriter("encoded tile 1: %i", encodedLength);
-    free( encoded );
+
+    // Allocate memory for the new padded image
+    auto *paddedImage = new uint16_t[new_width * new_height];
+
+    // Copy the original image to the padded image
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            paddedImage[y * new_width + x] = input[y * width + x];
+        }
+    }
+    int cnt = 0;
+    for(int i = 0; i<ty; i++)
+    {
+        for(int j = 0; j<1; j++) {
+            ret = lj92_encode(&input[j*0 + i*new_width*128], new_width, 128, bpp, 128 * new_width, 0, nullptr, 0, &encoded, &encodedLength);
+            //ret = lj92_encode(input, new_width, new_height, bpp, new_width * new_height, 0, nullptr, 0, &encoded, &encodedLength);
+            // Write the encoded tile to the TIFF file
+            TIFFWriteRawTile(tiff, cnt, encoded, encodedLength);
+            logWriter("encoded tile: %i", encodedLength);
+            // Free allocated memory
+            //free(encoded);
+            cnt++;
+        }
+    }
+    delete[] paddedImage;
+}
+
+void DngWriter::process16ToLossless(TIFF *tiff) {
+    int height = dngProfile->rawheight;
+    int width = dngProfile->rawwidht;
+
+    // Calculate new dimensions that are multiples of 128
+    int new_width = (width + 127) / 128 * 128;
+    int new_height = (height + 127) / 128 * 128;
+    int tx = new_width/128;
+    int ty = new_height/128;
+
+    TIFFSetField(tiff, TIFFTAG_TILEWIDTH, uint32_t(new_width));
+    logWriter("wrote TIFFTAG_TILEWIDTH %i", 128);
+    TIFFSetField(tiff, TIFFTAG_TILELENGTH, uint32_t(128));
+    logWriter("wrote TIFFTAG_TILELENGTH %i", 128);
+
+    logWriter("new_width %i new_height %i", new_width, new_height);
+
+    int ret = 0;
+    auto input = (uint16_t*) bayerBytes;
+    uint8_t *encoded = nullptr;
+    int encodedLength = 0;
+
+    // Allocate memory for the new padded image
+    auto *paddedImage = new uint16_t[new_width * new_height];
+
+    // Copy the original image to the padded image
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            paddedImage[y * new_width + x] = input[y * width + x];
+        }
+    }
+    int cnt = 0;
+    for(int i = 0; i<ty; i++)
+    {
+        for(int j = 0; j<1; j++) {
+            ret = lj92_encode(&input[j*0 + i*new_width*128], new_width, 128, bpp, 128 * new_width, 0, nullptr, 0, &encoded, &encodedLength);
+            //ret = lj92_encode(input, new_width, new_height, bpp, new_width * new_height, 0, nullptr, 0, &encoded, &encodedLength);
+            // Write the encoded tile to the TIFF file
+            TIFFWriteRawTile(tiff, cnt, encoded, encodedLength);
+            logWriter("encoded tile: %i", encodedLength);
+            // Free allocated memory
+            //free(encoded);
+            cnt++;
+        }
+    }
+    delete[] paddedImage;
 }
 
 void DngWriter::processSXXX16crop(TIFF *tif) {

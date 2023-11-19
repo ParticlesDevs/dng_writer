@@ -25,8 +25,8 @@ int main(){
         dngprofile->blacklevel[i] = 0.f;
     }
     dngprofile->whitelevel = 65535;
-    dngprofile->rawwidht = 4000;
-    dngprofile->rawheight = 3000;
+    dngprofile->rawwidht = 4096;
+    dngprofile->rawheight = 3072;
     dngprofile->rowSize = 0;
 
     /*char cfaar[4];
